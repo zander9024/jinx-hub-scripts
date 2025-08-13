@@ -1,8 +1,20 @@
---// Create Window
+--// Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+--// Setup
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+--// Create Main UI Window
 local Window = Rayfield:CreateWindow({
       Name = "Jinx Hub",
       LoadingTitle = "Loading Jinx Hub UI...",
-      LoadingSubtitle = "by dnd",
+      LoadingSubtitle = "by jinx",
       ConfigurationSaving = {
             Enabled = false,
       },
@@ -12,143 +24,118 @@ local Window = Rayfield:CreateWindow({
       KeySystem = false
 })
 
---// Create Tabs
+--// Create Universal Tab
 local UniversalTab = Window:CreateTab("Universal", 4483362458)
-local NinetyNineTab = Window:CreateTab("99 Nights In The Forest", 4483362458)
-
---// Variables
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local mouse = player:GetMouse()
 
 --// WalkSpeed Slider
 UniversalTab:CreateSlider({
       Name = "WalkSpeed",
-      Min = 16,
-      Max = 100,
-      CurrentValue = 16,
+      Range = {16, 100},
       Increment = 1,
-      Flag = "WalkSpeedSlider",
-      Callback = function(value)
-            humanoid.WalkSpeed = value
-      end
+      Suffix = "Speed",
+      CurrentValue = 16,
+      Callback = function(Value)
+            humanoid.WalkSpeed = Value
+      end,
 })
 
 --// JumpPower Slider
 UniversalTab:CreateSlider({
-      Name = "JumpPower",
-      Min = 50,
-      Max = 250,
-      CurrentValue = humanoid.JumpPower,
-      Increment = 1,
-      Flag = "JumpPowerSlider",
-      Callback = function(value)
-            humanoid.JumpPower = value
+      Name = "Jump Height",
+      Range = {50, 200},
+      Increment = 5,
+      Suffix = "Power",
+      CurrentValue = 50,
+      Callback = function(Value)
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = Value
+      end,
+})
+
+--// No Clip Toggle
+local noclip = false
+
+UniversalTab:CreateToggle({
+      Name = "No Clip",
+      CurrentValue = false,
+      Callback = function(Value)
+            noclip = Value
       end
 })
 
---// NoClip Toggle
-local noclipEnabled = false
-UniversalTab:CreateToggle({
-      Name = "NoClip",
-      CurrentValue = false,
-      Flag = "NoClipToggle",
-      Callback = function(value)
-            noclipEnabled = value
-            if noclipEnabled then
-                  game:GetService("RunService").Stepped:Connect(function()
-                        if noclipEnabled and character then
-                              for _, part in pairs(character:GetChildren()) do
-                                    if part:IsA("BasePart") then
-                                          part.CanCollide = false
-                                    end
-                              end
-                        end
-                  end)
-            else
-                  if character then
-                        for _, part in pairs(character:GetChildren()) do
-                              if part:IsA("BasePart") then
-                                    part.CanCollide = true
-                              end
-                        end
+RunService.Stepped:Connect(function()
+      if noclip and character then
+            for _, part in pairs(character:GetDescendants()) do
+                  if part:IsA("BasePart") then
+                        part.CanCollide = false
                   end
             end
       end
-})
+end)
 
---// Flight
+--// Fly Toggle
 local flying = false
-local speed = 50
-local bodyVelocity
-local bodyGyro
+local flyConnection
+local flySpeed = 100
 
 UniversalTab:CreateToggle({
       Name = "Fly",
       CurrentValue = false,
-      Flag = "FlyToggle",
-      Callback = function(value)
-            flying = value
+      Callback = function(Value)
+            flying = Value
+
             if flying then
-                  local rootPart = character:FindFirstChild("HumanoidRootPart")
-                  if rootPart then
-                        bodyGyro = Instance.new("BodyGyro")
-                        bodyGyro.P = 9e4
-                        bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                        bodyGyro.CFrame = rootPart.CFrame
-                        bodyGyro.Parent = rootPart
+                  local bv = Instance.new("BodyVelocity")
+                  local bg = Instance.new("BodyGyro")
 
-                        bodyVelocity = Instance.new("BodyVelocity")
-                        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                        bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                        bodyVelocity.Parent = rootPart
+                  bv.Name = "FlyVelocity"
+                  bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                  bv.Velocity = Vector3.zero
+                  bv.P = 1250
+                  bv.Parent = hrp
 
-                        spawn(function()
-                              while flying and bodyVelocity and bodyGyro and rootPart.Parent do
-                                    wait()
-                                    local moveDirection = Vector3.new()
+                  bg.Name = "FlyGyro"
+                  bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+                  bg.P = 3000
+                  bg.CFrame = workspace.CurrentCamera.CFrame
+                  bg.Parent = hrp
 
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
-                                          moveDirection = moveDirection + workspace.CurrentCamera.CFrame.LookVector
-                                    end
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
-                                          moveDirection = moveDirection - workspace.CurrentCamera.CFrame.LookVector
-                                    end
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
-                                          moveDirection = moveDirection - workspace.CurrentCamera.CFrame.RightVector
-                                    end
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
-                                          moveDirection = moveDirection + workspace.CurrentCamera.CFrame.RightVector
-                                    end
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
-                                          moveDirection = moveDirection + Vector3.new(0,1,0)
-                                    end
-                                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl) then
-                                          moveDirection = moveDirection - Vector3.new(0,1,0)
-                                    end
+                  flyConnection = RunService.RenderStepped:Connect(function()
+                        local camCF = workspace.CurrentCamera.CFrame
+                        bg.CFrame = camCF
 
-                                    bodyVelocity.Velocity = moveDirection.Unit * speed
-                                    bodyGyro.CFrame = workspace.CurrentCamera.CFrame
-                              end
-                        end)
-                  end
+                        local moveVec = Vector3.zero
+                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec += camCF.LookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec -= camCF.LookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec -= camCF.RightVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec += camCF.RightVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVec += Vector3.new(0, 1, 0) end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVec -= Vector3.new(0, 1, 0) end
+
+                        if moveVec.Magnitude > 0 then
+                              bv.Velocity = moveVec.Unit * flySpeed
+                        else
+                              bv.Velocity = Vector3.zero
+                        end
+                  end)
             else
-                  if bodyVelocity then bodyVelocity:Destroy() end
-                  if bodyGyro then bodyGyro:Destroy() end
+                  if hrp:FindFirstChild("FlyVelocity") then hrp.FlyVelocity:Destroy() end
+                  if hrp:FindFirstChild("FlyGyro") then hrp.FlyGyro:Destroy() end
+                  if flyConnection then flyConnection:Disconnect() end
             end
       end
 })
 
---// BTools Button with Delete Texture, Move and Resize Tools
+--// Local BTools Button
 UniversalTab:CreateButton({
       Name = "Give Local BTools (Client)",
       Callback = function()
             local Backpack = player:WaitForChild("Backpack")
+            local mouse = player:GetMouse()
 
-            -- Delete Texture Tool (Actually deletes parts)
+            -- Delete Tool
             local deleteTool = Instance.new("Tool")
-            deleteTool.Name = "Delete Texture"
+            deleteTool.Name = "Delete"
             deleteTool.RequiresHandle = false
 
             deleteTool.Activated:Connect(function()
@@ -159,38 +146,26 @@ UniversalTab:CreateButton({
             end)
             deleteTool.Parent = Backpack
 
-            -- Move Tool (Drag parts with left click + mouse move)
+            -- Move Tool
             local moveTool = Instance.new("Tool")
             moveTool.Name = "Move"
             moveTool.RequiresHandle = false
 
-            local dragging = false
-            local dragPart = nil
-            local dragConnection
+            local movingPart = nil
 
             moveTool.Activated:Connect(function()
-                  dragPart = mouse.Target
-                  if dragPart and dragPart:IsDescendantOf(workspace) then
-                        dragging = true
-                        local function onMouseMove()
-                              if dragging and dragPart and dragPart.Parent then
-                                    local pos = mouse.Hit.Position
-                                    dragPart.CFrame = CFrame.new(pos) * CFrame.new(0, dragPart.Size.Y / 2, 0)
-                              end
-                        end
-                        dragConnection = mouse.Move:Connect(onMouseMove)
+                  movingPart = mouse.Target
+            end)
+
+            RunService.RenderStepped:Connect(function()
+                  if moveTool.Parent == player.Character and movingPart then
+                        movingPart.CFrame = CFrame.new(mouse.Hit.p)
                   end
             end)
 
             moveTool.Deactivated:Connect(function()
-                  dragging = false
-                  if dragConnection then
-                        dragConnection:Disconnect()
-                        dragConnection = nil
-                  end
-                  dragPart = nil
+                  movingPart = nil
             end)
-
             moveTool.Parent = Backpack
 
             -- Resize Tool
@@ -198,112 +173,26 @@ UniversalTab:CreateButton({
             resizeTool.Name = "Resize"
             resizeTool.RequiresHandle = false
 
-            local adornments = {}
-
-            local function createDot(position)
-                  local dot = Instance.new("Part")
-                  dot.Size = Vector3.new(0.4, 0.4, 0.4)
-                  dot.Shape = Enum.PartType.Ball
-                  dot.Material = Enum.Material.Neon
-                  dot.BrickColor = BrickColor.new("Bright yellow")
-                  dot.Anchored = true
-                  dot.CanCollide = false
-                  dot.Transparency = 0.5
-                  dot.Position = position
-                  dot.Name = "ResizeDot"
-                  dot.Parent = workspace
-                  return dot
-            end
-
-            local draggingDot = nil
-            local selectedPart = nil
-
-            local function updateDots(part)
-                  -- Clear old adornments
-                  for _, d in pairs(adornments) do
-                        if d and d.Parent then d:Destroy() end
-                  end
-                  adornments = {}
-
-                  if not part or not part:IsDescendantOf(workspace) then return end
-
-                  local pos = part.Position
-                  local size = part.Size
-
-                  local front = pos + Vector3.new(0, 0, size.Z/2)
-                  local back = pos - Vector3.new(0, 0, size.Z/2)
-                  local left = pos - Vector3.new(size.X/2, 0, 0)
-                  local right = pos + Vector3.new(size.X/2, 0, 0)
-
-                  adornments.front = createDot(front)
-                  adornments.back = createDot(back)
-                  adornments.left = createDot(left)
-                  adornments.right = createDot(right)
-            end
-
-            local function clearDots()
-                  for _, d in pairs(adornments) do
-                        if d and d.Parent then d:Destroy() end
-                  end
-                  adornments = {}
-                  selectedPart = nil
-            end
-
-            mouse.Button1Down:Connect(function()
-                  local target = mouse.Target
-                  if resizeTool.Parent == player.Character then
-                        -- Check if clicked a resize dot
-                        for side, dot in pairs(adornments) do
-                              if target == dot then
-                                    draggingDot = dot
-                                    return
-                              end
-                        end
-
-                        -- If clicked part, select it and show dots
-                        if target and target:IsDescendantOf(workspace) and target.Name ~= "ResizeDot" then
-                              selectedPart = target
-                              updateDots(target)
-                        else
-                              clearDots()
-                        end
+            resizeTool.Activated:Connect(function()
+                  local targetPart = mouse.Target
+                  if targetPart then
+                        targetPart.Size = targetPart.Size + Vector3.new(1, 1, 1)
                   end
             end)
-
-            mouse.Button1Up:Connect(function()
-                  draggingDot = nil
-            end)
-
-            mouse.Move:Connect(function()
-                  if draggingDot and selectedPart then
-                        local mousePos = mouse.Hit.Position
-                        local pos = selectedPart.Position
-                        local size = selectedPart.Size
-
-                        if draggingDot == adornments.front then
-                              local newSizeZ = math.max(1, (mousePos - pos).Z + size.Z/2)
-                              selectedPart.Size = Vector3.new(size.X, size.Y, newSizeZ)
-                              selectedPart.CFrame = CFrame.new(pos.X, pos.Y, pos.Z + (newSizeZ - size.Z)/2)
-                        elseif draggingDot == adornments.back then
-                              local newSizeZ = math.max(1, (pos - mousePos).Z + size.Z/2)
-                              selectedPart.Size = Vector3.new(size.X, size.Y, newSizeZ)
-                              selectedPart.CFrame = CFrame.new(pos.X, pos.Y, pos.Z - (newSizeZ - size.Z)/2)
-                        elseif draggingDot == adornments.left then
-                              local newSizeX = math.max(1, (pos - mousePos).X + size.X/2)
-                              selectedPart.Size = Vector3.new(newSizeX, size.Y, size.Z)
-                              selectedPart.CFrame = CFrame.new(pos.X - (newSizeX - size.X)/2, pos.Y, pos.Z)
-                        elseif draggingDot == adornments.right then
-                              local newSizeX = math.max(1, (mousePos - pos).X + size.X/2)
-                              selectedPart.Size = Vector3.new(newSizeX, size.Y, size.Z)
-                              selectedPart.CFrame = CFrame.new(pos.X + (newSizeX - size.X)/2, pos.Y, pos.Z)
-                        end
-
-                        -- Update dots positions
-                        updateDots(selectedPart)
-                  end
-            end)
-
             resizeTool.Parent = Backpack
 
             Rayfield:Notify({
-                  Title =
+                  Title = "Local BTools Added",
+                  Content = "Client-side tools (Delete, Move, Resize) added to your backpack.",
+                  Duration = 4
+            })
+      end
+})
+
+--// 99 Nights In The Forest Tab
+local NightsTab = Window:CreateTab("99 Nights In The Forest", 4483362458)
+
+NightsTab:CreateParagraph({
+      Title = "99 Nights",
+      Content = "This section is reserved for features or tools specifically related to the 99 Nights In The Forest game or mode."
+})
