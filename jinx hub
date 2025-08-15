@@ -1,0 +1,2 @@
+print("Hello from the remote script!")
+game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 100
