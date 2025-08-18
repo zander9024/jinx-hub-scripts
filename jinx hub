@@ -1,141 +1,201 @@
--- Load Rayfield
-local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Create a window
-local Window = Rayfield:CreateWindow({
-    Name = "My BTools Hub",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "By You",
-    ConfigurationSaving = {
-        Enabled = false
-    },
-    Discord = {
-        Enabled = false
-    },
-    KeySystem = false,
-})
-
--- Create the tab BEFORE using it
-local UniversalTab = Window:CreateTab("Universal Tools", 4483362458)
-
--- Services & Player Setup
+--// Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local humanoid = player.Character and player.Character:WaitForChild("Humanoid")
-local hrp = player.Character:WaitForChild("HumanoidRootPart")
-local mouse = player:GetMouse()
 
--- Tools State
-local selectedPart = nil
-local isDragging = false
-local dragOffset = Vector3.new()
-local resizePart = nil
-local resizeDir = nil
+--// Wait for character
+repeat task.wait() until player.Character and player.Character:FindFirstChild("Humanoid") and player.Character:FindFirstChild("HumanoidRootPart")
 
--- Utility: Clean Destroy
-local function cleanDestroy(part)
-    if part then
-        for _, child in ipairs(part:GetDescendants()) do
-            if child:IsA("Weld") then child:Destroy() end
-            if child:IsA("BasePart") and child ~= part then child:Destroy() end
-        end
-        part:Destroy()
-    end
-end
+local character = player.Character
+local humanoid = character:FindFirstChild("Humanoid")
+local hrp = character:FindFirstChild("HumanoidRootPart")
 
--- Give B‑Tools
-UniversalTab:CreateButton({
-    Name = "Give Local BTools (Client)",
-    Callback = function()
-        local backpack = player:WaitForChild("Backpack")
+--// Create Main UI Window
+local Window = Rayfield:CreateWindow({
+    Name = "Jinx Hub",
+    LoadingTitle = "Loading Jinx Hub UI...",
+    LoadingSubtitle = "by jinx",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false
+    },
+    KeySystem = false
+})
 
-        -- Delete Tool
-        local delTool = Instance.new("Tool", backpack)
-        delTool.Name = "Delete"
-        delTool.RequiresHandle = false
-        delTool.Activated:Connect(function()
-            local target = mouse.Target
-            cleanDestroy(target)
-        end)
+--// Create Universal Tab
+local UniversalTab = Window:CreateTab("Universal", 4483362458)
 
-        -- Drag Tool
-        local dragTool = Instance.new("Tool", backpack)
-        dragTool.Name = "Move"
-        dragTool.RequiresHandle = false
-        dragTool.Activated:Connect(function()
-            local part = mouse.Target
-            if part and part:IsA("BasePart") then
-                selectedPart = part
-                isDragging = true
-                dragOffset = part.Position - mouse.Hit.p
-            end
-        end)
-        dragTool.Deactivated:Connect(function()
-            isDragging = false
-            selectedPart = nil
-        end)
+--// WalkSpeed Slider
+UniversalTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 100},
+    Increment = 1,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Callback = function(Value)
+        humanoid.WalkSpeed = Value
+    end,
+})
 
-        -- Resize Tool
-        local reTool = Instance.new("Tool", backpack)
-        reTool.Name = "Resize"
-        reTool.RequiresHandle = false
-        reTool.Activated:Connect(function()
-            local part = mouse.Target
-            if part and part:IsA("BasePart") then
-                resizePart = part
-                local hit = mouse.Hit.p - part.Position
-                local abs = Vector3.new(math.abs(hit.X), math.abs(hit.Y), math.abs(hit.Z))
-                if abs.X >= abs.Y and abs.X >= abs.Z then
-                    resizeDir = Vector3.new(1,0,0)
-                elseif abs.Y >= abs.Z then
-                    resizeDir = Vector3.new(0,1,0)
-                else
-                    resizeDir = Vector3.new(0,0,1)
-                end
-            end
-        end)
-        reTool.Deactivated:Connect(function()
-            resizePart, resizeDir = nil, nil
-        end)
+--// JumpPower Slider
+UniversalTab:CreateSlider({
+    Name = "Jump Height",
+    Range = {50, 200},
+    Increment = 5,
+    Suffix = "Power",
+    CurrentValue = 50,
+    Callback = function(Value)
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = Value
+    end,
+})
 
-        Rayfield:Notify({
-            Title = "Local BTools Updated",
-            Content = "Improved Delete, Drag, Resize tools added.",
-            Duration = 4
-        })
+--// No Clip Toggle
+local noclip = false
+
+UniversalTab:CreateToggle({
+    Name = "No Clip",
+    CurrentValue = false,
+    Callback = function(Value)
+        noclip = Value
     end
 })
 
--- RunService Loop for Drag, Resize, and No‑Clip + Jump Block
-local noclip = false
-RunService.RenderStepped:Connect(function()
-    -- No-Clip Behavior
-    if noclip then
-        humanoid.WalkSpeed = humanoid.WalkSpeed -- maintain current speed
-        humanoid.JumpPower = 0
-        for _, part in ipairs(player.Character:GetDescendants()) do
+RunService.Stepped:Connect(function()
+    if noclip and character then
+        for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
             end
         end
     end
-
-    -- Dragging
-    if isDragging and selectedPart then
-        selectedPart.Position = mouse.Hit.p + dragOffset
-    end
-
-    -- Resizing
-    if resizePart and resizeDir then
-        local delta = (mouse.Hit.p - resizePart.Position):Dot(resizeDir)
-        local newSize = resizePart.Size + (resizeDir * delta * 2)
-        newSize = Vector3.new(
-            math.max(newSize.X, 0.1),
-            math.max(newSize.Y, 0.1),
-            math.max(newSize.Z, 0.1)
-        )
-        resizePart.Size = newSize
-    end
 end)
+
+--// Fly Toggle
+local flying = false
+local flyConnection
+local flySpeed = 100
+
+UniversalTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Callback = function(Value)
+        flying = Value
+
+        if flying then
+            local bv = Instance.new("BodyVelocity")
+            local bg = Instance.new("BodyGyro")
+
+            bv.Name = "FlyVelocity"
+            bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            bv.Velocity = Vector3.zero
+            bv.P = 1250
+            bv.Parent = hrp
+
+            bg.Name = "FlyGyro"
+            bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+            bg.P = 3000
+            bg.CFrame = workspace.CurrentCamera.CFrame
+            bg.Parent = hrp
+
+            flyConnection = RunService.RenderStepped:Connect(function()
+                local camCF = workspace.CurrentCamera.CFrame
+                bg.CFrame = camCF
+
+                local moveVec = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec += camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVec += Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVec -= Vector3.new(0, 1, 0) end
+
+                if moveVec.Magnitude > 0 then
+                    bv.Velocity = moveVec.Unit * flySpeed
+                else
+                    bv.Velocity = Vector3.zero
+                end
+            end)
+        else
+            if hrp:FindFirstChild("FlyVelocity") then hrp.FlyVelocity:Destroy() end
+            if hrp:FindFirstChild("FlyGyro") then hrp.FlyGyro:Destroy() end
+            if flyConnection then flyConnection:Disconnect() end
+        end
+    end
+})
+
+--// Local BTools Button
+UniversalTab:CreateButton({
+    Name = "Give Local BTools (Client)",
+    Callback = function()
+        local Backpack = player:WaitForChild("Backpack")
+        local mouse = player:GetMouse()
+
+        -- Delete Tool
+        local deleteTool = Instance.new("Tool")
+        deleteTool.Name = "Delete"
+        deleteTool.RequiresHandle = false
+
+        deleteTool.Activated:Connect(function()
+            local target = mouse.Target
+            if target and target:IsDescendantOf(workspace) then
+                target:Destroy()
+            end
+        end)
+        deleteTool.Parent = Backpack
+
+        -- Move Tool
+        local moveTool = Instance.new("Tool")
+        moveTool.Name = "Move"
+        moveTool.RequiresHandle = false
+
+        local movingPart = nil
+
+        moveTool.Activated:Connect(function()
+            movingPart = mouse.Target
+        end)
+
+        RunService.RenderStepped:Connect(function()
+            if moveTool.Parent == player.Character and movingPart then
+                movingPart.CFrame = CFrame.new(mouse.Hit.p)
+            end
+        end)
+
+        moveTool.Deactivated:Connect(function()
+            movingPart = nil
+        end)
+        moveTool.Parent = Backpack
+
+        -- Resize Tool
+        local resizeTool = Instance.new("Tool")
+        resizeTool.Name = "Resize"
+        resizeTool.RequiresHandle = false
+
+        resizeTool.Activated:Connect(function()
+            local targetPart = mouse.Target
+            if targetPart then
+                targetPart.Size = targetPart.Size + Vector3.new(1, 1, 1)
+            end
+        end)
+        resizeTool.Parent = Backpack
+
+        Rayfield:Notify({
+            Title = "Local BTools Added",
+            Content = "Client-side tools (Delete, Move, Resize) added to your backpack.",
+            Duration = 4
+        })
+    end
+})
+
+--// Game-Specific Tab
+local NightsTab = Window:CreateTab("99 Nights In The Forest", 4483362458)
+
+NightsTab:CreateParagraph({
+    Title = "99 Nights",
+    Content = "This section is reserved for features or tools specifically related to the 99 Nights In The Forest game or mode."
+})
