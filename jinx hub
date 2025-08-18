@@ -1,4 +1,22 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
+
+-- Create a window
+local Window = Rayfield:CreateWindow({
+    Name = "My BTools Hub",
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "By You",
+    ConfigurationSaving = {
+        Enabled = false
+    },
+    Discord = {
+        Enabled = false
+    },
+    KeySystem = false,
+})
+
+-- Create the tab BEFORE using it
+local UniversalTab = Window:CreateTab("Universal Tools", 4483362458)
 
 -- Services & Player Setup
 local Players = game:GetService("Players")
@@ -7,6 +25,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local humanoid = player.Character and player.Character:WaitForChild("Humanoid")
 local hrp = player.Character:WaitForChild("HumanoidRootPart")
+local mouse = player:GetMouse()
 
 -- Tools State
 local selectedPart = nil
@@ -31,7 +50,6 @@ UniversalTab:CreateButton({
     Name = "Give Local BTools (Client)",
     Callback = function()
         local backpack = player:WaitForChild("Backpack")
-        local mouse = player:GetMouse()
 
         -- Delete Tool
         local delTool = Instance.new("Tool", backpack)
@@ -46,7 +64,6 @@ UniversalTab:CreateButton({
         local dragTool = Instance.new("Tool", backpack)
         dragTool.Name = "Move"
         dragTool.RequiresHandle = false
-
         dragTool.Activated:Connect(function()
             local part = mouse.Target
             if part and part:IsA("BasePart") then
@@ -55,7 +72,6 @@ UniversalTab:CreateButton({
                 dragOffset = part.Position - mouse.Hit.p
             end
         end)
-
         dragTool.Deactivated:Connect(function()
             isDragging = false
             selectedPart = nil
@@ -65,12 +81,10 @@ UniversalTab:CreateButton({
         local reTool = Instance.new("Tool", backpack)
         reTool.Name = "Resize"
         reTool.RequiresHandle = false
-
         reTool.Activated:Connect(function()
             local part = mouse.Target
             if part and part:IsA("BasePart") then
                 resizePart = part
-                -- Determine direction by nearest axis
                 local hit = mouse.Hit.p - part.Position
                 local abs = Vector3.new(math.abs(hit.X), math.abs(hit.Y), math.abs(hit.Z))
                 if abs.X >= abs.Y and abs.X >= abs.Z then
@@ -82,7 +96,6 @@ UniversalTab:CreateButton({
                 end
             end
         end)
-
         reTool.Deactivated:Connect(function()
             resizePart, resizeDir = nil, nil
         end)
@@ -100,8 +113,8 @@ local noclip = false
 RunService.RenderStepped:Connect(function()
     -- No-Clip Behavior
     if noclip then
-        humanoid.WalkSpeed = humanoid.WalkSpeed -- keep usual speed
-        humanoid.JumpPower = 0  -- disable jump
+        humanoid.WalkSpeed = humanoid.WalkSpeed -- maintain current speed
+        humanoid.JumpPower = 0
         for _, part in ipairs(player.Character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
