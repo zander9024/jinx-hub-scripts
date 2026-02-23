@@ -1,106 +1,142 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local playerGui = player:WaitForChild("PlayerGui")
 
---// Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DivineFarmMenu"
+screenGui.Parent = playerGui
 
---// Wait for character
-repeat task.wait() until player.Character and player.Character:FindFirstChild("Humanoid") and player.Character:FindFirstChild("HumanoidRootPart")
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 350, 0, 150)
+frame.Position = UDim2.new(0.5, -175, 0.5, -75)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+frame.Active = true
+frame.Draggable = true
 
-local character = player.Character
-local humanoid = character:FindFirstChild("Humanoid")
-local hrp = character:FindFirstChild("HumanoidRootPart")
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,30)
+title.Position = UDim2.new(0,0,0,0)
+title.Text = "Divine Farm"
+title.TextScaled = true
+title.BackgroundColor3 = Color3.fromRGB(50,50,50)
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = frame
 
---// Create Main UI Window
-local Window = Rayfield:CreateWindow({
-    Name = "Jinx Hub",
-    LoadingTitle = "Loading Jinx Hub UI...",
-    LoadingSubtitle = "by jinx",
-    ConfigurationSaving = {
-        Enabled = false,
-    },
-    Discord = {
-        Enabled = false
-    },
-    KeySystem = false
-})
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0,300,0,50)
+toggleButton.Position = UDim2.new(0.5,-150,0.5,-25)
+toggleButton.Text = "Divine Farm: OFF"
+toggleButton.TextScaled = true
+toggleButton.BackgroundColor3 = Color3.fromRGB(0,170,255)
+toggleButton.TextColor3 = Color3.new(1,1,1)
+toggleButton.Parent = frame
 
---// Create Universal Tab
-local UniversalTab = Window:CreateTab("Universal", 4483362458)
+-- Close Button
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0,30,0,30)
+closeButton.Position = UDim2.new(1,-35,0,5)
+closeButton.Text = "X"
+closeButton.TextScaled = true
+closeButton.BackgroundColor3 = Color3.fromRGB(170,0,0)
+closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.Parent = frame
 
---// WalkSpeed Slider
-UniversalTab:CreateSlider({
-    Name = "WalkSpeed",
-    Range = {16, 100},
-    Increment = 1,
-    Suffix = "Speed",
-    CurrentValue = 16,
-    Callback = function(Value)
-        humanoid.WalkSpeed = Value
-    end,
-})
+-- Variables
+local farmRunning = false
+local validTiers = {
+    Common=true, Uncommon=true, Rare=true, Epic=true, Legendary=true,
+    Mythical=true, Cosmic=true, Secret=true, Celestial=true, Divine=true
+}
 
---// JumpPower Slider
-UniversalTab:CreateSlider({
-    Name = "Jump Height",
-    Range = {50, 200},
-    Increment = 5,
-    Suffix = "Power",
-    CurrentValue = 50,
-    Callback = function(Value)
-        humanoid.UseJumpPower = true
-        humanoid.JumpPower = Value
-    end,
-})
+-- Get current Tower Trial tier
+local function getCurrentTier()
+    local TowerTrialHUD = game.StarterPlayer:FindFirstChild("TowerTrialHUD")
+    if not TowerTrialHUD then return nil end
+    local TrialBar = TowerTrialHUD:FindFirstChild("TrialBar")
+    if not TrialBar then return nil end
+    local Requirement = TrialBar:FindFirstChild("Requirement")
+    if not Requirement then return nil end
 
---// No Clip Toggle
-local noclip = false
+    local text = Requirement.Text or ""
+    local cleanText = text:gsub("<.->",""):gsub("^%s+",""):gsub("%s+$","")
 
-UniversalTab:CreateToggle({
-    Name = "No Clip",
-    CurrentValue = false,
-    Callback = function(Value)
-        noclip = Value
+    for tier,_ in pairs(validTiers) do
+        if cleanText:find(tier) then
+            return tier
+        end
     end
-})
+    return nil
+end
 
-RunService.Stepped:Connect(function()
-    if noclip and character then
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+-- Teleport to a random brainrot inside the folder matching the tier
+local function teleportToTier(tier)
+    local activeFolder = workspace:FindFirstChild("ActiveBrainrots")
+    if not activeFolder then return end
+
+    local tierFolder = activeFolder:FindFirstChild(tier)
+    if not tierFolder then
+        warn("No folder found for tier:", tier)
+        return
+    end
+
+    local models = tierFolder:GetChildren()
+    if #models == 0 then
+        warn("No models found in folder:", tierFolder.Name)
+        return
+    end
+
+    local randomModel = models[math.random(1,#models)]
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local targetCFrame
+        if randomModel.PrimaryPart then
+            targetCFrame = randomModel.PrimaryPart.CFrame
+        else
+            local anyPart
+            for _, child in pairs(randomModel:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    anyPart = child
+                    break
+                end
+            end
+            if anyPart then
+                targetCFrame = anyPart.CFrame
             end
         end
+
+        if targetCFrame then
+            hrp.CFrame = targetCFrame + Vector3.new(0,3,0)
+        else
+            warn("No valid part found in model:", randomModel.Name)
+        end
+    end
+end
+
+-- Toggle logic
+toggleButton.MouseButton1Click:Connect(function()
+    farmRunning = not farmRunning
+    toggleButton.Text = "Divine Farm: "..(farmRunning and "ON" or "OFF")
+
+    if farmRunning then
+        spawn(function()
+            while farmRunning do
+                local tier = getCurrentTier()
+                if tier then
+                    print("Detected Tier:", tier)
+                    teleportToTier(tier)
+                end
+                wait(2)
+            end
+        end)
     end
 end)
 
---// Fly Toggle
-local flying = false
-local flyConnection
-local flySpeed = 100
-
-UniversalTab:CreateToggle({
-    Name = "Fly",
-    CurrentValue = false,
-    Callback = function(Value)
-        flying = Value
-
-        if flying then
-            local bv = Instance.new("BodyVelocity")
-            local bg = Instance.new("BodyGyro")
-
-            bv.Name = "FlyVelocity"
-            bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-            bv.Velocity = Vector3.zero
-            bv.P = 1250
-            bv.Parent = hrp
-
-            bg.Name = "FlyGyro"
-            bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-            bg.P = 3000
-            bg.CFrame = workspace.CurrentCamera.CFrame
-            bg.Parent = hrp
-
-            flyConnection
+-- Close GUI
+closeButton.MouseButton1Click:Connect(function()
+    screenGui.Enabled = false
+end)
