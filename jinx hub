@@ -26,7 +26,7 @@ title.BackgroundColor3 = Color3.fromRGB(50,50,50)
 title.TextColor3 = Color3.new(1,1,1)
 title.Parent = frame
 
--- Toggle Button
+-- Toggle
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0,300,0,50)
 toggleButton.Position = UDim2.new(0.5,-150,0.5,-25)
@@ -36,7 +36,7 @@ toggleButton.BackgroundColor3 = Color3.fromRGB(0,170,255)
 toggleButton.TextColor3 = Color3.new(1,1,1)
 toggleButton.Parent = frame
 
--- Close Button
+-- Close
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0,30,0,30)
 closeButton.Position = UDim2.new(1,-35,0,5)
@@ -53,18 +53,17 @@ local validTiers = {
     Mythical=true, Cosmic=true, Secret=true, Celestial=true, Divine=true
 }
 
--- Get current Tower Trial tier
+-- Get current tier
 local function getCurrentTier()
-    local TowerTrialHUD = game.StarterPlayer:FindFirstChild("TowerTrialHUD")
-    if not TowerTrialHUD then return nil end
-    local TrialBar = TowerTrialHUD:FindFirstChild("TrialBar")
+    local HUD = game.StarterPlayer:FindFirstChild("TowerTrialHUD")
+    if not HUD then return nil end
+    local TrialBar = HUD:FindFirstChild("TrialBar")
     if not TrialBar then return nil end
     local Requirement = TrialBar:FindFirstChild("Requirement")
     if not Requirement then return nil end
 
     local text = Requirement.Text or ""
     local cleanText = text:gsub("<.->",""):gsub("^%s+",""):gsub("%s+$","")
-
     for tier,_ in pairs(validTiers) do
         if cleanText:find(tier) then
             return tier
@@ -73,22 +72,14 @@ local function getCurrentTier()
     return nil
 end
 
--- Teleport to a random brainrot inside the folder matching the tier
+-- Teleport to random brainrot of tier
 local function teleportToTier(tier)
     local activeFolder = workspace:FindFirstChild("ActiveBrainrots")
     if not activeFolder then return end
-
     local tierFolder = activeFolder:FindFirstChild(tier)
-    if not tierFolder then
-        warn("No folder found for tier:", tier)
-        return
-    end
-
+    if not tierFolder then return end
     local models = tierFolder:GetChildren()
-    if #models == 0 then
-        warn("No models found in folder:", tierFolder.Name)
-        return
-    end
+    if #models == 0 then return end
 
     local randomModel = models[math.random(1,#models)]
     local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -97,22 +88,15 @@ local function teleportToTier(tier)
         if randomModel.PrimaryPart then
             targetCFrame = randomModel.PrimaryPart.CFrame
         else
-            local anyPart
-            for _, child in pairs(randomModel:GetDescendants()) do
+            for _,child in pairs(randomModel:GetDescendants()) do
                 if child:IsA("BasePart") then
-                    anyPart = child
+                    targetCFrame = child.CFrame
                     break
                 end
             end
-            if anyPart then
-                targetCFrame = anyPart.CFrame
-            end
         end
-
         if targetCFrame then
             hrp.CFrame = targetCFrame + Vector3.new(0,3,0)
-        else
-            warn("No valid part found in model:", randomModel.Name)
         end
     end
 end
@@ -136,7 +120,7 @@ toggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Close GUI
+-- Close
 closeButton.MouseButton1Click:Connect(function()
     screenGui.Enabled = false
 end)
